@@ -1,4 +1,5 @@
 import nn
+import backend as B
 
 class PerceptronModel(object):
     def __init__(self, dimensions):
@@ -138,8 +139,21 @@ class DigitClassificationModel(object):
     working on this part of the project.)
     """
     def __init__(self):
-        # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        #x = w, y = b
+
+        x1_val = nn.Parameter(784,100)
+        x2_val = nn.Parameter(100,10)
+        y1_val = nn.Parameter(1,100)
+        y2_val = nn.Parameter(1,10)
+
+        self.lr = -.1
+
+        self.x1 = x1_val
+        self.x2 = x2_val
+        self.y1 = y1_val
+        self.y2 = y2_val
+        
+
 
     def run(self, x):
         """
@@ -156,6 +170,7 @@ class DigitClassificationModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        return nn.AddBias(nn.Linear(nn.ReLU(nn.AddBias(nn.Linear(x,self.x1), self.y1)), self.x2), self.y2)
 
     def get_loss(self, x, y):
         """
@@ -171,12 +186,23 @@ class DigitClassificationModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while dataset.get_validation_accuracy() < 0.98:
+            num_iter = 1
+            for alpha,beta in dataset.iterate_once(num_iter):
+                lst = [self.x1, self.x2, self.y1, self.y2]
+                curr = self.get_loss(alpha,beta)
+                grad = nn.gradients(curr, lst)
+                self.x1.update(grad[0], self.lr)
+                self.y1.update(grad[2], self.lr)
+                self.x2.update(grad[1], self.lr)
+                self.y2.update(grad[3], self.lr)
 
 class LanguageIDModel(object):
     """
@@ -196,6 +222,21 @@ class LanguageIDModel(object):
 
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
+        # x = w and y = b
+
+        x0_val = nn.Parameter(47, 110)
+        x1_val = nn.Parameter(110, 110)
+        x2_val = nn.Parameter(110, 5)
+        y0_val = nn.Parameter(1,110)
+        y1_val = nn.Parameter(1,5)
+
+        self.x0 = x0_val
+        self.x1 = x1_val
+        self.x2 = x2_val
+        self.y0 = y0_val
+        self.y1 = y1_val
+
+        self.lr = -.1
 
     def run(self, xs):
         """
@@ -227,6 +268,12 @@ class LanguageIDModel(object):
                 (also called logits)
         """
         "*** YOUR CODE HERE ***"
+        init_node_lst = nn.Linear(xs[0], self.x0)
+        nodes = init_node_lst
+        for val in xs[1:]:
+            to_add = nn.Linear(val, self.x0), nn.Linear(nodes, self.x1)
+            nodes = nn.Add(to_add[0], to_add[1])
+        return nn.AddBias(nn.Linear(nn.ReLU(nn.AddBias(nodes, self.y0)), self.x2), self.y1)
 
     def get_loss(self, xs, y):
         """
@@ -243,9 +290,21 @@ class LanguageIDModel(object):
         Returns: a loss node
         """
         "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(xs), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
         "*** YOUR CODE HERE ***"
+        while dataset.get_validation_accuracy() < 0.85:
+            iter_val = 30
+            for alpha,beta in dataset.iterate_once(iter_val):
+                curr = self.get_loss(alpha,beta)
+                lst = [self.x0, self.x1, self.x2, self.y0, self.y1]
+                grad = nn.gradients(curr, lst)
+                self.x0.update(grad[0], self.lr)
+                self.y0.update(grad[3], self.lr)
+                self.x1.update(grad[1], self.lr)
+                self.y1.update(grad[4], self.lr)
+                self.x2.update(grad[2], self.lr)
